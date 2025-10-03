@@ -1,11 +1,18 @@
 using Microsoft.EntityFrameworkCore;
 using Back.Models.Entities;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 
 namespace Back.Data
 {
     public class AppDbContext : DbContext
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAccessor httpContextAccessor) : base(options) 
+        {
+            _httpContextAccessor = httpContextAccessor;
+        }
         
         public DbSet<User> Users { get; set; }
         public DbSet<Role> Roles { get; set; }
@@ -106,6 +113,150 @@ namespace Back.Data
                 
             // Заполнение начальных данных
             SeedData(modelBuilder);
+        }
+
+        public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            var defectEntries = ChangeTracker.Entries<Defect>()
+                .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified || e.State == EntityState.Deleted)
+                .ToList();
+
+            var historyEntries = new List<DefectHistory>();
+            var now = DateTime.UtcNow;
+            var currentUserId = GetCurrentUserId();
+
+            foreach (var entry in defectEntries)
+            {
+                var defect = entry.Entity;
+
+                if (entry.State == EntityState.Added)
+                {
+                    // Логирование создания дефекта
+                    historyEntries.Add(new DefectHistory
+                    {
+                        DefectId = defect.DefectId,
+                        UserId = currentUserId,
+                        FieldName = "Defect",
+                        OldValue = null,
+                        NewValue = "Created",
+                        ChangeDate = now
+                    });
+
+                    // Логирование начальных значений полей
+                    LogInitialFieldValues(defect, currentUserId, now, historyEntries);
+                }
+                else if (entry.State == EntityState.Modified)
+                {
+                    // Логирование изменений полей
+                    LogFieldChanges(entry, defect, currentUserId, now, historyEntries);
+                }
+                else if (entry.State == EntityState.Deleted)
+                {
+                    // Логирование удаления дефекта
+                    historyEntries.Add(new DefectHistory
+                    {
+                        DefectId = defect.DefectId,
+                        UserId = currentUserId,
+                        FieldName = "Defect",
+                        OldValue = "Exists",
+                        NewValue = "Deleted",
+                        ChangeDate = now
+                    });
+                }
+            }
+
+            // Сохраняем изменения в основной таблице
+            var result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+
+            // Добавляем записи истории
+            if (historyEntries.Any())
+            {
+                DefectHistories.AddRange(historyEntries);
+                await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+            }
+
+            return result;
+        }
+
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            return SaveChangesAsync(acceptAllChangesOnSuccess).GetAwaiter().GetResult();
+        }
+
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return userId;
+            }
+            return 1; // Fallback to admin user if not authenticated (for testing)
+        }
+
+        private void LogInitialFieldValues(Defect defect, int userId, DateTime changeDate, List<DefectHistory> historyEntries)
+        {
+            var fieldsToLog = new[]
+            {
+                new { Field = "ProjectId", Value = defect.ProjectId.ToString() },
+                new { Field = "StatusId", Value = defect.StatusId.ToString() },
+                new { Field = "ResponsibleId", Value = defect.ResponsibleId?.ToString() ?? "None" },
+                new { Field = "CreatedById", Value = defect.CreatedById.ToString() }
+            };
+
+            foreach (var field in fieldsToLog)
+            {
+                historyEntries.Add(new DefectHistory
+                {
+                    DefectId = defect.DefectId,
+                    UserId = userId,
+                    FieldName = field.Field,
+                    OldValue = null,
+                    NewValue = field.Value,
+                    ChangeDate = changeDate
+                });
+            }
+        }
+
+        private void LogFieldChanges(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<Defect> entry, Defect defect, int userId, DateTime changeDate, List<DefectHistory> historyEntries)
+        {
+            var changedProperties = entry.Properties
+                .Where(p => p.IsModified && !p.Metadata.IsPrimaryKey())
+                .ToList();
+
+            foreach (var property in changedProperties)
+            {
+                var propertyName = property.Metadata.Name;
+                var originalValue = property.OriginalValue?.ToString() ?? "null";
+                var currentValue = property.CurrentValue?.ToString() ?? "null";
+
+                // Пропускаем логирование, если значения не изменились
+                if (originalValue == currentValue)
+                    continue;
+
+                historyEntries.Add(new DefectHistory
+                {
+                    DefectId = defect.DefectId,
+                    UserId = userId,
+                    FieldName = propertyName,
+                    OldValue = originalValue,
+                    NewValue = currentValue,
+                    ChangeDate = changeDate
+                });
+            }
+
+            // Логирование изменения UpdatedDate
+            if (entry.Property(x => x.UpdatedDate).IsModified)
+            {
+                historyEntries.Add(new DefectHistory
+                {
+                    DefectId = defect.DefectId,
+                    UserId = userId,
+                    FieldName = "UpdatedDate",
+                    OldValue = entry.Property(x => x.UpdatedDate).OriginalValue.ToString(),
+                    NewValue = defect.UpdatedDate.ToString(),
+                    ChangeDate = changeDate
+                });
+            }
         }
         
         private void SeedData(ModelBuilder modelBuilder)
