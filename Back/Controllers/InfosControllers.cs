@@ -3,11 +3,14 @@ using Microsoft.EntityFrameworkCore;
 using Back.Data;
 using Back.Models.Entities;
 using Back.DTOs;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace Back.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Policy = "CanViewAll")]
     public class InfosController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -20,7 +23,19 @@ namespace Back.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<InfoDTO>>> GetInfos()
         {
-            return await _context.Infos
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            IQueryable<Info> query = _context.Infos
+                .Include(i => i.Defect);
+
+            // Наблюдатель видит только информацию о своих дефектах
+            if (currentUserRole == "Observer")
+            {
+                query = query.Where(i => i.Defect!.ResponsibleId == currentUserId);
+            }
+
+            return await query
                 .Select(i => new InfoDTO
                 {
                     InfoId = i.InfoId,
@@ -36,11 +51,22 @@ namespace Back.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<InfoDTO>> GetInfo(int id)
         {
-            var info = await _context.Infos.FindAsync(id);
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            var info = await _context.Infos
+                .Include(i => i.Defect)
+                .FirstOrDefaultAsync(i => i.InfoId == id);
 
             if (info == null)
             {
                 return NotFound();
+            }
+
+            // Наблюдатель может видеть только информацию о своих дефектах
+            if (currentUserRole == "Observer" && info.Defect?.ResponsibleId != currentUserId)
+            {
+                return Forbid();
             }
 
             return new InfoDTO
@@ -55,6 +81,7 @@ namespace Back.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "CanManageDefects")]
         public async Task<ActionResult<InfoDTO>> CreateInfo(InfoCreateDTO infoCreateDTO)
         {
             var info = new Info
@@ -81,12 +108,25 @@ namespace Back.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = "CanManageDefects")]
         public async Task<IActionResult> UpdateInfo(int id, InfoUpdateDTO infoUpdateDTO)
         {
-            var info = await _context.Infos.FindAsync(id);
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            var info = await _context.Infos
+                .Include(i => i.Defect)
+                .FirstOrDefaultAsync(i => i.InfoId == id);
+
             if (info == null)
             {
                 return NotFound();
+            }
+
+            // Наблюдатель может редактировать только информацию о своих дефектах
+            if (currentUserRole == "Observer" && info.Defect?.ResponsibleId != currentUserId)
+            {
+                return Forbid();
             }
 
             info.DefectName = infoUpdateDTO.DefectName;
@@ -112,12 +152,25 @@ namespace Back.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "CanManageDefects")]
         public async Task<IActionResult> DeleteInfo(int id)
         {
-            var info = await _context.Infos.FindAsync(id);
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            var info = await _context.Infos
+                .Include(i => i.Defect)
+                .FirstOrDefaultAsync(i => i.InfoId == id);
+
             if (info == null)
             {
                 return NotFound();
+            }
+
+            // Наблюдатель может удалять только информацию о своих дефектах
+            if (currentUserRole == "Observer" && info.Defect?.ResponsibleId != currentUserId)
+            {
+                return Forbid();
             }
 
             _context.Infos.Remove(info);

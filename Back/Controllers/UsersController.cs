@@ -3,18 +3,24 @@ using Microsoft.EntityFrameworkCore;
 using Back.Data;
 using Back.Models.Entities;
 using Back.DTOs;
+using Back.Services;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace Back.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Policy = "CanManageUsers")] // Только менеджер может управлять пользователями
     public class UsersController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IAuthService _authService; // Авторизация сервис
 
-        public UsersController(AppDbContext context)
+        public UsersController(AppDbContext context, IAuthService authService)
         {
             _context = context;
+            _authService = authService;
         }
 
         [HttpGet]
@@ -58,12 +64,28 @@ namespace Back.Controllers
         [HttpPost]
         public async Task<ActionResult<UserDTO>> CreateUser(UserCreateDTO userCreateDTO)
         {
+            // Проверяем, что создающий пользователь - менеджер
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            if (currentUserRole != "Manager")
+            {
+                return Forbid();
+            }
+
+            // Не позволяем создавать пользователей с ролью выше своей
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var currentUser = await _context.Users.FindAsync(currentUserId);
+            
+            if (userCreateDTO.RoleId > currentUser!.RoleId)
+            {
+                return BadRequest("Cannot create user with higher role");
+            }
+
             var user = new User
             {
                 RoleId = userCreateDTO.RoleId,
                 Login = userCreateDTO.Login,
                 Fio = userCreateDTO.Fio,
-                Hash = userCreateDTO.Hash
+                Hash = _authService.HashPassword(userCreateDTO.Hash)
             };
 
             _context.Users.Add(user);
@@ -81,23 +103,39 @@ namespace Back.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateUser(int id, UserUpdateDTO userUpdateDTO)
         {
-            if (id != userUpdateDTO.RoleId) // Обычно здесь должно быть сравнение с UserId, но в DTO нет UserId
-            {
-                return BadRequest();
-            }
-
             var user = await _context.Users.FindAsync(id);
             if (user == null)
             {
                 return NotFound();
             }
 
+            // Проверяем права доступа
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            // Пользователь может редактировать только себя, если он не менеджер
+            if (currentUserRole != "Manager" && currentUserId != id)
+            {
+                return Forbid();
+            }
+
+            // Менеджер не может изменить роль на более высокую
+            if (currentUserRole == "Manager" && userUpdateDTO.RoleId > user.RoleId)
+            {
+                var currentUser = await _context.Users.FindAsync(currentUserId);
+                if (userUpdateDTO.RoleId > currentUser!.RoleId)
+                {
+                    return BadRequest("Cannot assign higher role than your own");
+                }
+            }
+
             user.RoleId = userUpdateDTO.RoleId;
             user.Login = userUpdateDTO.Login;
             user.Fio = userUpdateDTO.Fio;
+            
             if (!string.IsNullOrEmpty(userUpdateDTO.Hash))
             {
-                user.Hash = userUpdateDTO.Hash;
+                user.Hash = _authService.HashPassword(userUpdateDTO.Hash);
             }
 
             try
@@ -123,6 +161,13 @@ namespace Back.Controllers
             if (user == null)
             {
                 return NotFound();
+            }
+
+            // Нельзя удалить самого себя
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            if (currentUserId == id)
+            {
+                return BadRequest("Cannot delete your own account");
             }
 
             _context.Users.Remove(user);

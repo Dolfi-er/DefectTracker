@@ -3,11 +3,14 @@ using Microsoft.EntityFrameworkCore;
 using Back.Data;
 using Back.Models.Entities;
 using Back.DTOs;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace Back.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Policy = "CanViewAll")] // Все авторизованные могут просматривать
     public class DefectsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -20,7 +23,18 @@ namespace Back.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<DefectDTO>>> GetDefects()
         {
-            return await _context.Defects
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            IQueryable<Defect> query = _context.Defects;
+
+            // Наблюдатель видит только назначенные ему дефекты
+            if (currentUserRole == "Observer")
+            {
+                query = query.Where(d => d.ResponsibleId == currentUserId);
+            }
+
+            return await query
                 .Include(d => d.Project)
                 .Include(d => d.Status)
                 .Include(d => d.Info)
@@ -56,6 +70,9 @@ namespace Back.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<DefectDTO>> GetDefect(int id)
         {
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
             var defect = await _context.Defects
                 .Include(d => d.Project)
                 .Include(d => d.Status)
@@ -67,6 +84,12 @@ namespace Back.Controllers
             if (defect == null)
             {
                 return NotFound();
+            }
+
+            // Наблюдатель может видеть только назначенные ему дефекты
+            if (currentUserRole == "Observer" && defect.ResponsibleId != currentUserId)
+            {
+                return Forbid();
             }
 
             return new DefectDTO
@@ -96,8 +119,11 @@ namespace Back.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "CanManageDefects")] // Инженер и менеджер могут создавать дефекты
         public async Task<ActionResult<DefectDTO>> CreateDefect(DefectCreateDTO defectCreateDTO)
         {
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
             // Сначала создаем Info
             var info = new Info
             {
@@ -109,7 +135,7 @@ namespace Back.Controllers
             };
 
             _context.Infos.Add(info);
-            await _context.SaveChangesAsync(); // Сохраняем чтобы получить InfoId
+            await _context.SaveChangesAsync();
 
             var defect = new Defect
             {
@@ -117,7 +143,7 @@ namespace Back.Controllers
                 StatusId = defectCreateDTO.StatusId,
                 InfoId = info.InfoId,
                 ResponsibleId = defectCreateDTO.ResponsibleId,
-                CreatedById = defectCreateDTO.CreatedById,
+                CreatedById = currentUserId, // Устанавливаем текущего пользователя как создателя
                 CreatedDate = DateTime.UtcNow,
                 UpdatedDate = DateTime.UtcNow
             };
@@ -139,6 +165,7 @@ namespace Back.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = "CanManageDefects")] // Инженер и менеджер могут редактировать дефекты
         public async Task<IActionResult> UpdateDefect(int id, DefectUpdateDTO defectUpdateDTO)
         {
             var defect = await _context.Defects
@@ -148,6 +175,15 @@ namespace Back.Controllers
             if (defect == null)
             {
                 return NotFound();
+            }
+
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value); // Fixed: value -> Value
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            // Инженер может редактировать только назначенные ему дефекты
+            if (currentUserRole == "Engineer" && defect.ResponsibleId != currentUserId)
+            {
+                return Forbid();
             }
 
             defect.ProjectId = defectUpdateDTO.ProjectId;
@@ -182,12 +218,22 @@ namespace Back.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "CanManageDefects")] // Инженер и менеджер могут удалять дефекты
         public async Task<IActionResult> DeleteDefect(int id)
         {
             var defect = await _context.Defects.FindAsync(id);
             if (defect == null)
             {
                 return NotFound();
+            }
+
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value); // Fixed: value -> Value
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            // Инженер может удалять только назначенные ему дефекты
+            if (currentUserRole == "Engineer" && defect.ResponsibleId != currentUserId)
+            {
+                return Forbid();
             }
 
             _context.Defects.Remove(defect);

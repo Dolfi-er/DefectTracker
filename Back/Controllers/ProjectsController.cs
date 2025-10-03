@@ -3,11 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using Back.Data;
 using Back.Models.Entities;
 using Back.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Back.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Policy = "CanViewAll")] // Все авторизованные могут просматривать
     public class ProjectsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -60,6 +62,7 @@ namespace Back.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "CanManageProjects")] // Только менеджер может создавать проекты
         public async Task<ActionResult<ProjectDTO>> CreateProject(ProjectCreateDTO projectCreateDTO)
         {
             var project = new Project
@@ -86,6 +89,7 @@ namespace Back.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = "CanManageProjects")] // Только менеджер может редактировать проекты
         public async Task<IActionResult> UpdateProject(int id, ProjectUpdateDTO projectUpdateDTO)
         {
             var project = await _context.Projects.FindAsync(id);
@@ -116,6 +120,7 @@ namespace Back.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "CanManageProjects")] // Только менеджер может удалять проекты
         public async Task<IActionResult> DeleteProject(int id)
         {
             var project = await _context.Projects.FindAsync(id);
