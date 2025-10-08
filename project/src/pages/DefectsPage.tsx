@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiService } from '../services/api';
 import type { DefectDTO, ProjectDTO, DefectStatusDTO, UserDTO, DefectUpdateDTO } from '../types/api';
 import { Plus, Search, Filter, AlertCircle, Calendar, User, Edit2, Trash2 } from 'lucide-react';
@@ -6,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 export function DefectsPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [defects, setDefects] = useState<DefectDTO[]>([]);
   const [projects, setProjects] = useState<ProjectDTO[]>([]);
   const [statuses, setStatuses] = useState<DefectStatusDTO[]>([]);
@@ -14,7 +16,7 @@ export function DefectsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState<number | null>(null);
   const [filterStatus, setFilterStatus] = useState<number | null>(null);
-  const [selectedDefect, setSelectedDefect] = useState<DefectDTO | null>(null);
+  //const [selectedDefect, setSelectedDefect] = useState<DefectDTO | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingDefect, setEditingDefect] = useState<DefectDTO | null>(null);
 
@@ -259,10 +261,10 @@ export function DefectsPage() {
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={() => setSelectedDefect(defect)}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                >
+                 <button
+                    onClick={() => navigate(`/defects/${defect.defectId}`)}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
                   View Details
                 </button>
               </div>
@@ -522,7 +524,7 @@ export function DefectsPage() {
         </div>
       )}
 
-      {selectedDefect && (
+      {/*selectedDefect && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
@@ -592,7 +594,7 @@ export function DefectsPage() {
             </div>
           </div>
         </div>
-      )}
+      )*/}
     </div>
   );
 }
