@@ -21,6 +21,8 @@ import type {
   UserStatsDTO,
   PriorityMetricsDTO,
   TimelineStatsDTO,
+  UserCreateDTO,
+  UserUpdateDTO,
 } from '../types/api';
 
 class ApiService {
@@ -202,6 +204,37 @@ class ApiService {
 
   async getDefectsTimeline(days: number = 30): Promise<TimelineStatsDTO[]> {
     return this.fetch<TimelineStatsDTO[]>(`/api/Statistics/defects-timeline?days=${days}`);
+  }
+
+  // Добавить в services/api.ts
+  async createUser(data: UserCreateDTO): Promise<UserDTO> {
+    return this.fetch<UserDTO>('/api/Auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        login: data.login,
+        password: data.password,
+        fio: data.fio,
+        roleId: data.roleId
+      }),
+    });
+  }
+
+  async updateUser(id: number, data: UserUpdateDTO): Promise<void> {
+    return this.fetch<void>(`/api/Users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        roleId: data.roleId,
+        login: data.login,
+        fio: data.fio,
+        hash: data.password ? data.password : undefined
+      }),
+    });
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    return this.fetch<void>(`/api/Users/${id}`, {
+      method: 'DELETE',
+    });
   }
 }
 

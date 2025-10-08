@@ -198,3 +198,18 @@ export interface TimelineStatsDTO {
   createdCount: number;
   closedCount: number;
 }
+
+
+export interface UserCreateDTO {
+  roleId: number;
+  login: string;
+  fio: string;
+  password: string; // Изменяем hash на password для удобства
+}
+
+export interface UserUpdateDTO {
+  roleId: number;
+  login: string;
+  fio: string;
+  password?: string; // Делаем пароль опциональным
+}

@@ -1,12 +1,18 @@
+// Заменить весь файл UsersPage.tsx
 import { useEffect, useState } from 'react';
 import { apiService } from '../services/api';
-import type { UserDTO, RoleDTO } from '../types/api';
-import { Users, Shield, Mail } from 'lucide-react';
+import type { UserDTO, RoleDTO, UserCreateDTO, UserUpdateDTO } from '../types/api';
+import { Users, Shield, Mail, Plus, Edit2, Trash2, UserPlus } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export function UsersPage() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserDTO[]>([]);
   const [roles, setRoles] = useState<RoleDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserDTO | null>(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadData();
@@ -22,16 +28,83 @@ export function UsersPage() {
       setRoles(rolesData);
     } catch (error) {
       console.error('Failed to load data:', error);
+      setError('Failed to load users data');
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleCreateUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError('');
+    const formData = new FormData(e.currentTarget);
+
+    try {
+      const userData: UserCreateDTO = {
+        roleId: Number(formData.get('roleId')),
+        login: formData.get('login') as string,
+        fio: formData.get('fio') as string,
+        password: formData.get('password') as string,
+      };
+
+      await apiService.createUser(userData);
+      await loadData();
+      setShowCreateModal(false);
+    } catch (error) {
+      console.error('Failed to create user:', error);
+      setError('Failed to create user. Please check your permissions and try again.');
+    }
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError('');
+    if (!editingUser) return;
+
+    const formData = new FormData(e.currentTarget);
+
+    try {
+      const userData: UserUpdateDTO = {
+        roleId: Number(formData.get('roleId')),
+        login: formData.get('login') as string,
+        fio: formData.get('fio') as string,
+      };
+
+      const password = formData.get('password') as string;
+      if (password) {
+        userData.password = password;
+      }
+
+      await apiService.updateUser(editingUser.userId, userData);
+      await loadData();
+      setEditingUser(null);
+    } catch (error) {
+      console.error('Failed to update user:', error);
+      setError('Failed to update user. Please check your permissions and try again.');
+    }
+  };
+
+  const handleDeleteUser = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+
+    try {
+      await apiService.deleteUser(id);
+      await loadData();
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      setError('Failed to delete user. Please check your permissions and try again.');
+    }
+  };
+
+  const canManageUsers = currentUser?.roleName?.toLowerCase().includes('manager') || 
+                        currentUser?.roleName?.toLowerCase().includes('admin');
 
   const getRoleColor = (roleName: string) => {
     const name = roleName.toLowerCase();
     if (name.includes('admin')) return 'bg-red-100 text-red-700 border-red-200';
     if (name.includes('manager')) return 'bg-blue-100 text-blue-700 border-blue-200';
     if (name.includes('developer')) return 'bg-green-100 text-green-700 border-green-200';
+    if (name.includes('engineer')) return 'bg-purple-100 text-purple-700 border-purple-200';
     return 'bg-gray-100 text-gray-700 border-gray-200';
   };
 
@@ -50,7 +123,22 @@ export function UsersPage() {
           <h1 className="text-3xl font-bold text-gray-900">Users</h1>
           <p className="text-gray-600 mt-1">Manage team members and their roles</p>
         </div>
+        {canManageUsers && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            <UserPlus className="w-5 h-5" />
+            New User
+          </button>
+        )}
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
@@ -61,6 +149,9 @@ export function UsersPage() {
                 <th className="text-left py-4 px-6 font-semibold text-gray-700">Login</th>
                 <th className="text-left py-4 px-6 font-semibold text-gray-700">Role</th>
                 <th className="text-center py-4 px-6 font-semibold text-gray-700">ID</th>
+                {canManageUsers && (
+                  <th className="text-center py-4 px-6 font-semibold text-gray-700">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -105,6 +196,26 @@ export function UsersPage() {
                   <td className="py-4 px-6 text-center">
                     <span className="text-sm text-gray-500">#{user.userId}</span>
                   </td>
+                  {canManageUsers && (
+                    <td className="py-4 px-6">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => setEditingUser(user)}
+                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Edit user"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.userId)}
+                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete user"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -116,7 +227,163 @@ export function UsersPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
           <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No users found</h3>
-          <p className="text-gray-600">Users will appear here once registered</p>
+          <p className="text-gray-600">Get started by creating your first user</p>
+        </div>
+      )}
+
+      {/* Create User Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Create New User</h2>
+            </div>
+            <form onSubmit={handleCreateUser} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  name="fio"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter full name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Login
+                </label>
+                <input
+                  type="text"
+                  name="login"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter login"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter password"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                <select
+                  name="roleId"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {roles.map((role) => (
+                    <option key={role.roleId} value={role.roleId}>
+                      {role.roleName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Create User
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Edit User</h2>
+            </div>
+            <form onSubmit={handleUpdateUser} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  name="fio"
+                  required
+                  defaultValue={editingUser.fio}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Login
+                </label>
+                <input
+                  type="text"
+                  name="login"
+                  required
+                  defaultValue={editingUser.login}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  New Password (optional)
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Leave blank to keep current password"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                <select
+                  name="roleId"
+                  required
+                  defaultValue={editingUser.roleId}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {roles.map((role) => (
+                    <option key={role.roleId} value={role.roleId}>
+                      {role.roleName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Save Changes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
