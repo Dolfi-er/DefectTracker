@@ -24,7 +24,7 @@ import type {
 } from '../types/api';
 
 class ApiService {
-  private baseURL: string = '';
+  private baseURL: string = 'http://localhost:5229';
   private token: string | null = null;
 
   setBaseURL(url: string) {

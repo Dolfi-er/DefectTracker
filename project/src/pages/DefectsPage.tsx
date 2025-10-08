@@ -5,7 +5,7 @@ import { Plus, Search, Filter, AlertCircle, Calendar, User } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext';
 
 export function DefectsPage() {
-  //const { user } = useAuth();
+  const { user } = useAuth();
   const [defects, setDefects] = useState<DefectDTO[]>([]);
   const [projects, setProjects] = useState<ProjectDTO[]>([]);
   const [statuses, setStatuses] = useState<DefectStatusDTO[]>([]);
@@ -71,7 +71,7 @@ export function DefectsPage() {
         projectId: Number(formData.get('projectId')),
         statusId: Number(formData.get('statusId')),
         responsibleId: formData.get('responsibleId') ? Number(formData.get('responsibleId')) : null,
-        createdById: 1,
+        createdById: user!.userId,
         info: {
           defectName: formData.get('defectName') as string,
           defectDescription: formData.get('defectDescription') as string,
