@@ -58,6 +58,7 @@ class ApiService {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       ...options,
       headers,
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -77,7 +78,6 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    this.setToken(result.token);
     return result;
   }
 

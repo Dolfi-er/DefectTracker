@@ -22,12 +22,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const token = apiService.getToken();
-      if (token) {
-        const currentUser = await apiService.getCurrentUser();
-        setUser(currentUser);
-      }
+      // Проверяем авторизацию через endpoint me
+      const currentUser = await apiService.getCurrentUser();
+      setUser(currentUser);
     } catch (error) {
+      console.error('Auth check failed:', error);
       apiService.setToken(null);
     } finally {
       setIsLoading(false);
@@ -36,7 +35,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     const response = await apiService.login({ login: username, password });
-    setUser(response.user);
+    // После успешного логина проверяем пользователя
+    const currentUser = await apiService.getCurrentUser();
+    setUser(currentUser);
   };
 
   const logout = async () => {
