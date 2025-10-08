@@ -130,12 +130,12 @@ namespace Back.Controllers
                 DefectName = defectCreateDTO.Info.DefectName,
                 DefectDescription = defectCreateDTO.Info.DefectDescription,
                 Priority = defectCreateDTO.Info.Priority,
-                DueDate = defectCreateDTO.Info.DueDate.ToUniversalTime(), // Преобразуем в UTC
+                DueDate = defectCreateDTO.Info.DueDate.ToUniversalTime(),
                 StatusChangeDate = DateTime.UtcNow
             };
 
             _context.Infos.Add(info);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(); // Сохраняем Info чтобы получить InfoId
 
             var defect = new Defect
             {
@@ -149,7 +149,21 @@ namespace Back.Controllers
             };
 
             _context.Defects.Add(defect);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(); // Сохраняем Defect чтобы получить DefectId
+
+            // Загружаем связанные данные для возврата полного DTO
+            await _context.Entry(defect)
+                .Reference(d => d.Project)
+                .LoadAsync();
+            await _context.Entry(defect)
+                .Reference(d => d.Status)
+                .LoadAsync();
+            await _context.Entry(defect)
+                .Reference(d => d.Responsible)
+                .LoadAsync();
+            await _context.Entry(defect)
+                .Reference(d => d.CreatedBy)
+                .LoadAsync();
 
             return CreatedAtAction(nameof(GetDefect), new { id = defect.DefectId }, new DefectDTO
             {
@@ -160,7 +174,20 @@ namespace Back.Controllers
                 ResponsibleId = defect.ResponsibleId,
                 CreatedById = defect.CreatedById,
                 CreatedDate = defect.CreatedDate,
-                UpdatedDate = defect.UpdatedDate
+                UpdatedDate = defect.UpdatedDate,
+                ProjectName = defect.Project?.Name,
+                StatusName = defect.Status?.StatusName,
+                ResponsibleFio = defect.Responsible?.Fio,
+                CreatedByFio = defect.CreatedBy?.Fio,
+                Info = new InfoDTO
+                {
+                    InfoId = info.InfoId,
+                    DefectName = info.DefectName,
+                    DefectDescription = info.DefectDescription,
+                    Priority = info.Priority,
+                    DueDate = info.DueDate,
+                    StatusChangeDate = info.StatusChangeDate
+                }
             });
         }
 
@@ -217,7 +244,7 @@ namespace Back.Controllers
 
             return NoContent();
         }
-        
+
         [HttpDelete("{id}")]
         [Authorize(Policy = "CanManageDefects")] // Инженер и менеджер могут удалять дефекты
         public async Task<IActionResult> DeleteDefect(int id)

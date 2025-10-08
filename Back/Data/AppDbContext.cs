@@ -150,7 +150,10 @@ namespace Back.Data
                 historyEntries.Clear(); // Clear the list for the next batch
             }
 
-            // Now process added and modified defects
+            // Save defects first to get their IDs
+            var result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+
+            // Now process added and modified defects for history
             foreach (var entry in defectEntries.Where(e => e.State == EntityState.Added || e.State == EntityState.Modified))
             {
                 var defect = entry.Entity;
@@ -160,7 +163,7 @@ namespace Back.Data
                     // Log defect creation
                     historyEntries.Add(new DefectHistory
                     {
-                        DefectId = defect.DefectId,
+                        DefectId = defect.DefectId, // Now this ID is available
                         UserId = currentUserId,
                         FieldName = "Defect",
                         OldValue = "",
@@ -177,9 +180,6 @@ namespace Back.Data
                     LogFieldChanges(entry, defect, currentUserId, now, historyEntries);
                 }
             }
-
-            // Save all changes (defect modifications/deletions and history for added/modified defects)
-            var result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
 
             // Add remaining history entries (for added and modified defects)
             if (historyEntries.Any())
