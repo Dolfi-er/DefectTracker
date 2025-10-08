@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiService } from '../services/api';
-import type { DefectDTO, ProjectDTO, DefectStatusDTO, UserDTO } from '../types/api';
-import { Plus, Search, Filter, AlertCircle, Calendar, User } from 'lucide-react';
+import type { DefectDTO, ProjectDTO, DefectStatusDTO, UserDTO, DefectUpdateDTO } from '../types/api';
+import { Plus, Search, Filter, AlertCircle, Calendar, User, Edit2, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export function DefectsPage() {
@@ -16,6 +16,7 @@ export function DefectsPage() {
   const [filterStatus, setFilterStatus] = useState<number | null>(null);
   const [selectedDefect, setSelectedDefect] = useState<DefectDTO | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingDefect, setEditingDefect] = useState<DefectDTO | null>(null);
 
   useEffect(() => {
     loadData();
@@ -84,6 +85,46 @@ export function DefectsPage() {
     } catch (error) {
       console.error('Failed to create defect:', error);
       alert('Failed to create defect');
+    }
+  };
+
+  const handleUpdateDefect = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingDefect) return;
+
+    const formData = new FormData(e.currentTarget);
+
+    try {
+      const updateData: DefectUpdateDTO = {
+        projectId: Number(formData.get('projectId')),
+        statusId: Number(formData.get('statusId')),
+        responsibleId: formData.get('responsibleId') ? Number(formData.get('responsibleId')) : null,
+        info: {
+          defectName: formData.get('defectName') as string,
+          defectDescription: formData.get('defectDescription') as string,
+          priority: Number(formData.get('priority')),
+          dueDate: formData.get('dueDate') as string,
+        },
+      };
+
+      await apiService.updateDefect(editingDefect.defectId, updateData);
+      await loadData();
+      setEditingDefect(null);
+    } catch (error) {
+      console.error('Failed to update defect:', error);
+      alert('Failed to update defect');
+    }
+  };
+
+  const handleDeleteDefect = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this defect?')) return;
+
+    try {
+      await apiService.deleteDefect(id);
+      await loadData();
+    } catch (error) {
+      console.error('Failed to delete defect:', error);
+      alert('Failed to delete defect');
     }
   };
 
@@ -165,8 +206,7 @@ export function DefectsPage() {
         {filteredDefects.map((defect) => (
           <div
             key={defect.defectId}
-            onClick={() => setSelectedDefect(defect)}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
@@ -204,9 +244,28 @@ export function DefectsPage() {
 
             <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
               <span className="text-sm font-medium text-blue-600">{defect.statusName}</span>
-              <span className="text-xs text-gray-500">
-                {new Date(defect.createdDate).toLocaleDateString()}
-              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditingDefect(defect)}
+                  className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  title="Edit defect"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDeleteDefect(defect.defectId)}
+                  className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Delete defect"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setSelectedDefect(defect)}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  View Details
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -328,6 +387,131 @@ export function DefectsPage() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingDefect && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Edit Defect</h2>
+            </div>
+            <form onSubmit={handleUpdateDefect} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Defect Name
+                </label>
+                <input
+                  type="text"
+                  name="defectName"
+                  required
+                  defaultValue={editingDefect.info.defectName}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  name="defectDescription"
+                  required
+                  rows={4}
+                  defaultValue={editingDefect.info.defectDescription}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Project</label>
+                  <select
+                    name="projectId"
+                    required
+                    defaultValue={editingDefect.projectId}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    {projects.map((project) => (
+                      <option key={project.projectId} value={project.projectId}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <select
+                    name="statusId"
+                    required
+                    defaultValue={editingDefect.statusId}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    {statuses.map((status) => (
+                      <option key={status.id} value={status.id}>
+                        {status.statusName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                  <select
+                    name="priority"
+                    required
+                    defaultValue={editingDefect.info.priority}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="1">Low</option>
+                    <option value="2">Medium</option>
+                    <option value="3">High</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                  <input
+                    type="date"
+                    name="dueDate"
+                    required
+                    defaultValue={editingDefect.info.dueDate.split('T')[0]}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Assign To (Optional)
+                </label>
+                <select
+                  name="responsibleId"
+                  defaultValue={editingDefect.responsibleId || ''}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((u) => (
+                    <option key={u.userId} value={u.userId}>
+                      {u.fio} ({u.roleName})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Save Changes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingDefect(null)}
                   className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
                 >
                   Cancel
