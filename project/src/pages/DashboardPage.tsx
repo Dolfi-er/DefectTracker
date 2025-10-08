@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { apiService } from '../services/api';
-import type { OverviewStatsDTO, ProjectStatsDTO, UserStatsDTO } from '../types/api';
+import type { OverviewStatsDTO, ProjectStatsDTO, UserStatsDTO, DefectStatusDTO } from '../types/api';
 import { BarChart3, AlertTriangle, CheckCircle, Clock, TrendingUp } from 'lucide-react';
 
 export function DashboardPage() {
   const [overview, setOverview] = useState<OverviewStatsDTO | null>(null);
   const [projects, setProjects] = useState<ProjectStatsDTO[]>([]);
   const [users, setUsers] = useState<UserStatsDTO[]>([]);
+  const [defectStatuses, setDefectStatuses] = useState<DefectStatusDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -15,19 +16,49 @@ export function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
-      const [overviewData, projectsData, usersData] = await Promise.all([
+      const [overviewData, projectsData, usersData, statusesData] = await Promise.all([
         apiService.getOverviewStats(),
         apiService.getDefectsByProject(),
         apiService.getDefectsByUser(),
+        apiService.getDefectStatuses(),
       ]);
       setOverview(overviewData);
       setProjects(projectsData);
       setUsers(usersData);
+      setDefectStatuses(statusesData);
     } catch (error) {
       console.error('Failed to load dashboard:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Функция для получения количества дефектов по имени статуса
+  const getDefectCountByStatusName = (statusName: string): number => {
+    if (!overview?.defectsByStatus || !defectStatuses.length) return 0;
+
+    // Находим ID статуса по имени
+    const status = defectStatuses.find(s => s.statusName === statusName);
+    if (!status) return 0;
+
+    // Возвращаем количество по ID статуса
+    return overview.defectsByStatus[status.id] || 0;
+  };
+
+  // Функция для получения общего количества открытых дефектов (все статусы кроме Closed и Cancelled)
+  const getOpenDefectsCount = (): number => {
+    if (!overview?.defectsByStatus || !defectStatuses.length) return 0;
+
+    let openCount = 0;
+    const closedStatusNames = ['Closed', 'Cancelled'];
+    
+    defectStatuses.forEach(status => {
+      if (!closedStatusNames.includes(status.statusName)) {
+        openCount += overview.defectsByStatus[status.id] || 0;
+      }
+    });
+
+    return openCount;
   };
 
   if (isLoading) {
@@ -78,7 +109,7 @@ export function DashboardPage() {
           </div>
           <p className="text-gray-600 text-sm font-medium">Open Defects</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">
-            {overview?.defectsByStatus?.['Open'] || 0}
+            {getOpenDefectsCount()}
           </p>
         </div>
 
@@ -102,11 +133,12 @@ export function DashboardPage() {
           </div>
           <p className="text-gray-600 text-sm font-medium">Closed Defects</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">
-            {overview?.defectsByStatus?.['Closed'] || 0}
+            {getDefectCountByStatusName('Closed')}
           </p>
         </div>
       </div>
 
+      {/* Остальной код остается без изменений */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
