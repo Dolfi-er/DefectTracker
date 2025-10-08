@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { apiService } from '../services/api';
-import type { OverviewStatsDTO, ProjectStatsDTO, UserStatsDTO, DefectStatusDTO } from '../types/api';
-import { BarChart3, AlertTriangle, CheckCircle, Clock, TrendingUp } from 'lucide-react';
+import type { OverviewStatsDTO, ProjectStatsDTO, UserStatsDTO, DefectStatusDTO, TimelineStatsDTO, StatusStatsDTO } from '../types/api';
+import { BarChart3, AlertTriangle, CheckCircle, Clock, TrendingUp, PieChart as PieChartIcon, BarChart as BarChartIcon, Activity } from 'lucide-react';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 export function DashboardPage() {
   const [overview, setOverview] = useState<OverviewStatsDTO | null>(null);
   const [projects, setProjects] = useState<ProjectStatsDTO[]>([]);
   const [users, setUsers] = useState<UserStatsDTO[]>([]);
   const [defectStatuses, setDefectStatuses] = useState<DefectStatusDTO[]>([]);
+  const [statusStats, setStatusStats] = useState<StatusStatsDTO[]>([]);
+  const [timelineStats, setTimelineStats] = useState<TimelineStatsDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -16,16 +19,20 @@ export function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
-      const [overviewData, projectsData, usersData, statusesData] = await Promise.all([
+      const [overviewData, projectsData, usersData, statusesData, statusStatsData, timelineData] = await Promise.all([
         apiService.getOverviewStats(),
         apiService.getDefectsByProject(),
         apiService.getDefectsByUser(),
         apiService.getDefectStatuses(),
+        apiService.getDefectsByStatus(),
+        apiService.getDefectsTimeline(30),
       ]);
       setOverview(overviewData);
       setProjects(projectsData);
       setUsers(usersData);
       setDefectStatuses(statusesData);
+      setStatusStats(statusStatsData);
+      setTimelineStats(timelineData);
     } catch (error) {
       console.error('Failed to load dashboard:', error);
     } finally {
@@ -37,11 +44,9 @@ export function DashboardPage() {
   const getDefectCountByStatusName = (statusName: string): number => {
     if (!overview?.defectsByStatus || !defectStatuses.length) return 0;
 
-    // Находим ID статуса по имени
     const status = defectStatuses.find(s => s.statusName === statusName);
     if (!status) return 0;
 
-    // Возвращаем количество по ID статуса
     return overview.defectsByStatus[status.id] || 0;
   };
 
@@ -59,6 +64,44 @@ export function DashboardPage() {
     });
 
     return openCount;
+  };
+
+  // Подготовка данных для круговой диаграммы по статусам
+  const statusChartData = statusStats.map(status => ({
+    name: status.statusName,
+    value: status.count,
+    percentage: status.percentage
+  }));
+
+  // Подготовка данных для столбчатой диаграммы по приоритетам
+  const priorityChartData = [
+    { name: 'Low', count: overview?.defectsByPriority?.['1'] || 0, color: '#10B981' },
+    { name: 'Medium', count: overview?.defectsByPriority?.['2'] || 0, color: '#F59E0B' },
+    { name: 'High', count: overview?.defectsByPriority?.['3'] || 0, color: '#EF4444' },
+  ];
+
+  // Цвета для круговой диаграммы
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+  // Форматирование даты для графика временной шкалы
+  const formatTimelineDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  // Кастомный тултип для круговой диаграммы
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-3 border border-gray-200 rounded shadow-sm">
+          <p className="font-medium">{`${data.name}`}</p>
+          <p className="text-sm">{`Count: ${data.value}`}</p>
+          <p className="text-sm">{`Percentage: ${data.percentage?.toFixed(1)}%`}</p>
+        </div>
+      );
+    }
+    return null;
   };
 
   if (isLoading) {
@@ -90,6 +133,7 @@ export function DashboardPage() {
         </div>
       </div>
 
+      {/* Статистические карточки */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
@@ -138,7 +182,105 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Остальной код остается без изменений */}
+      {/* Графики */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Круговая диаграмма по статусам */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <PieChartIcon className="w-5 h-5 text-blue-600" />
+            Defects by Status
+          </h2>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={statusChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percentage }) => `${name}: ${(percentage as number).toFixed(1)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {statusChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Столбчатая диаграмма по приоритетам */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <BarChartIcon className="w-5 h-5 text-green-600" />
+            Defects by Priority
+          </h2>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={priorityChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value) => [`${value} defects`, 'Count']} />
+                <Bar dataKey="count" name="Defects">
+                  {priorityChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* График временной шкалы */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Activity className="w-5 h-5 text-purple-600" />
+          Defects Timeline (Last 30 Days)
+        </h2>
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={timelineStats}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="date" 
+                tickFormatter={formatTimelineDate}
+                interval="preserveStartEnd"
+              />
+              <YAxis />
+              <Tooltip 
+                labelFormatter={(label) => `Date: ${formatTimelineDate(label)}`}
+                formatter={(value) => [`${value} defects`, 'Count']}
+              />
+              <Legend />
+              <Line 
+                type="monotone" 
+                dataKey="createdCount" 
+                stroke="#3B82F6" 
+                strokeWidth={2}
+                name="Created Defects"
+                dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="closedCount" 
+                stroke="#10B981" 
+                strokeWidth={2}
+                name="Closed Defects"
+                dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Остальная часть дашборда (проекты, команда) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
