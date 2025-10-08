@@ -77,7 +77,7 @@ export function DefectsPage() {
           defectName: formData.get('defectName') as string,
           defectDescription: formData.get('defectDescription') as string,
           priority: Number(formData.get('priority')),
-          dueDate: formData.get('dueDate') as string,
+          dueDate: new Date(formData.get('dueDate') as string).toISOString(), // Преобразуем в ISO строку
         },
       });
       await loadData();
@@ -103,7 +103,7 @@ export function DefectsPage() {
           defectName: formData.get('defectName') as string,
           defectDescription: formData.get('defectDescription') as string,
           priority: Number(formData.get('priority')),
-          dueDate: formData.get('dueDate') as string,
+          dueDate: new Date(formData.get('dueDate') as string).toISOString(), // Преобразуем в ISO строку
         },
       };
 

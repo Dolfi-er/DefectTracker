@@ -125,50 +125,63 @@ namespace Back.Data
             var now = DateTime.UtcNow;
             var currentUserId = GetCurrentUserId();
 
-            foreach (var entry in defectEntries)
+            // First, process deleted defects and add their history entries
+            foreach (var entry in defectEntries.Where(e => e.State == EntityState.Deleted))
+            {
+                var defect = entry.Entity;
+                
+                // Log defect deletion
+                historyEntries.Add(new DefectHistory
+                {
+                    DefectId = defect.DefectId,
+                    UserId = currentUserId,
+                    FieldName = "Defect",
+                    OldValue = "Exists",
+                    NewValue = "Deleted",
+                    ChangeDate = now
+                });
+            }
+
+            // Add history entries for deleted defects first
+            if (historyEntries.Any())
+            {
+                DefectHistories.AddRange(historyEntries);
+                await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+                historyEntries.Clear(); // Clear the list for the next batch
+            }
+
+            // Now process added and modified defects
+            foreach (var entry in defectEntries.Where(e => e.State == EntityState.Added || e.State == EntityState.Modified))
             {
                 var defect = entry.Entity;
 
                 if (entry.State == EntityState.Added)
                 {
-                    // Логирование создания дефекта
+                    // Log defect creation
                     historyEntries.Add(new DefectHistory
                     {
                         DefectId = defect.DefectId,
                         UserId = currentUserId,
                         FieldName = "Defect",
-                        OldValue = null,
+                        OldValue = "",
                         NewValue = "Created",
                         ChangeDate = now
                     });
 
-                    // Логирование начальных значений полей
+                    // Log initial field values
                     LogInitialFieldValues(defect, currentUserId, now, historyEntries);
                 }
                 else if (entry.State == EntityState.Modified)
                 {
-                    // Логирование изменений полей
+                    // Log field changes
                     LogFieldChanges(entry, defect, currentUserId, now, historyEntries);
-                }
-                else if (entry.State == EntityState.Deleted)
-                {
-                    // Логирование удаления дефекта
-                    historyEntries.Add(new DefectHistory
-                    {
-                        DefectId = defect.DefectId,
-                        UserId = currentUserId,
-                        FieldName = "Defect",
-                        OldValue = "Exists",
-                        NewValue = "Deleted",
-                        ChangeDate = now
-                    });
                 }
             }
 
-            // Сохраняем изменения в основной таблице
+            // Save all changes (defect modifications/deletions and history for added/modified defects)
             var result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
 
-            // Добавляем записи истории
+            // Add remaining history entries (for added and modified defects)
             if (historyEntries.Any())
             {
                 DefectHistories.AddRange(historyEntries);
@@ -210,7 +223,7 @@ namespace Back.Data
                     DefectId = defect.DefectId,
                     UserId = userId,
                     FieldName = field.Field,
-                    OldValue = null,
+                    OldValue = "",
                     NewValue = field.Value,
                     ChangeDate = changeDate
                 });

@@ -119,7 +119,7 @@ namespace Back.Controllers
         }
 
         [HttpPost]
-        [Authorize(Policy = "CanManageDefects")] // Инженер и менеджер могут создавать дефекты
+        [Authorize(Policy = "CanManageDefects")]
         public async Task<ActionResult<DefectDTO>> CreateDefect(DefectCreateDTO defectCreateDTO)
         {
             var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
@@ -130,7 +130,7 @@ namespace Back.Controllers
                 DefectName = defectCreateDTO.Info.DefectName,
                 DefectDescription = defectCreateDTO.Info.DefectDescription,
                 Priority = defectCreateDTO.Info.Priority,
-                DueDate = defectCreateDTO.Info.DueDate,
+                DueDate = defectCreateDTO.Info.DueDate.ToUniversalTime(), // Преобразуем в UTC
                 StatusChangeDate = DateTime.UtcNow
             };
 
@@ -143,7 +143,7 @@ namespace Back.Controllers
                 StatusId = defectCreateDTO.StatusId,
                 InfoId = info.InfoId,
                 ResponsibleId = defectCreateDTO.ResponsibleId,
-                CreatedById = currentUserId, // Устанавливаем текущего пользователя как создателя
+                CreatedById = currentUserId,
                 CreatedDate = DateTime.UtcNow,
                 UpdatedDate = DateTime.UtcNow
             };
@@ -164,8 +164,9 @@ namespace Back.Controllers
             });
         }
 
+
         [HttpPut("{id}")]
-        [Authorize(Policy = "CanManageDefects")] // Инженер и менеджер могут редактировать дефекты
+        [Authorize(Policy = "CanManageDefects")]
         public async Task<IActionResult> UpdateDefect(int id, DefectUpdateDTO defectUpdateDTO)
         {
             var defect = await _context.Defects
@@ -177,7 +178,7 @@ namespace Back.Controllers
                 return NotFound();
             }
 
-            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value); // Fixed: value -> Value
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
 
             // Инженер может редактировать только назначенные ему дефекты
@@ -197,7 +198,7 @@ namespace Back.Controllers
                 defect.Info.DefectName = defectUpdateDTO.Info.DefectName;
                 defect.Info.DefectDescription = defectUpdateDTO.Info.DefectDescription;
                 defect.Info.Priority = defectUpdateDTO.Info.Priority;
-                defect.Info.DueDate = defectUpdateDTO.Info.DueDate;
+                defect.Info.DueDate = defectUpdateDTO.Info.DueDate.ToUniversalTime(); // Преобразуем в UTC
                 defect.Info.StatusChangeDate = DateTime.UtcNow;
             }
 
@@ -216,7 +217,7 @@ namespace Back.Controllers
 
             return NoContent();
         }
-
+        
         [HttpDelete("{id}")]
         [Authorize(Policy = "CanManageDefects")] // Инженер и менеджер могут удалять дефекты
         public async Task<IActionResult> DeleteDefect(int id)
