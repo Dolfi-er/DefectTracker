@@ -213,3 +213,22 @@ export interface UserUpdateDTO {
   fio: string;
   password?: string; // Делаем пароль опциональным
 }
+
+// Добавить в api.ts после существующих DTO
+export interface DefectAttachmentDTO {
+  attachmentId: number;
+  defectId: number;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  uploadDate: string;
+  uploadedById: number;
+  uploadedByFio: string | null;
+}
+
+export interface DefectAttachmentCreateDTO {
+  defectId: number;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+}

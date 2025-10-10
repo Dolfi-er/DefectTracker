@@ -23,6 +23,8 @@ import type {
   TimelineStatsDTO,
   UserCreateDTO,
   UserUpdateDTO,
+  DefectAttachmentDTO,
+  DefectAttachmentCreateDTO,
 } from '../types/api';
 
 class ApiService {
@@ -206,7 +208,6 @@ class ApiService {
     return this.fetch<TimelineStatsDTO[]>(`/api/Statistics/defects-timeline?days=${days}`);
   }
 
-  // Добавить в services/api.ts
   async createUser(data: UserCreateDTO): Promise<UserDTO> {
     return this.fetch<UserDTO>('/api/Auth/register', {
       method: 'POST',
@@ -235,6 +236,22 @@ class ApiService {
     return this.fetch<void>(`/api/Users/${id}`, {
       method: 'DELETE',
     });
+  }
+
+  // Добавить в ApiService в api.ts
+  async getDefectAttachments(defectId: number): Promise<DefectAttachmentDTO[]> {
+    return this.fetch<DefectAttachmentDTO[]>(`/api/DefectAttachments/defect/${defectId}`);
+  }
+
+  async createDefectAttachment(data: DefectAttachmentCreateDTO): Promise<DefectAttachmentDTO> {
+    return this.fetch<DefectAttachmentDTO>('/api/DefectAttachments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteDefectAttachment(id: number): Promise<void> {
+    return this.fetch<void>(`/api/DefectAttachments/${id}`, { method: 'DELETE' });
   }
 }
 
