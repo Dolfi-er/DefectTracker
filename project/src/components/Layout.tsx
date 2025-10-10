@@ -1,4 +1,3 @@
-// Layout.tsx
 import { ReactNode, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -10,6 +9,7 @@ import {
   LogOut,
   Menu,
   X,
+  FileText
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -27,6 +27,7 @@ export function Layout({ children }: LayoutProps) {
     { id: 'defects' as const, label: 'Defects', icon: AlertCircle, path: '/defects' },
     { id: 'projects' as const, label: 'Projects', icon: FolderOpen, path: '/projects' },
     { id: 'users' as const, label: 'Users', icon: Users, path: '/users' },
+    { id: 'reports' as const, label: 'Reports', icon: FileText, path: '/reports' },
   ];
 
   // Определяем текущую страницу на основе location
@@ -36,12 +37,13 @@ export function Layout({ children }: LayoutProps) {
     if (path.startsWith('/defects')) return 'defects';
     if (path.startsWith('/projects')) return 'projects';
     if (path.startsWith('/users')) return 'users';
+    if (path.startsWith('/reports')) return 'reports';
     return 'dashboard';
   };
 
   const currentPage = getCurrentPage();
 
-  const handleNavigate = (page: 'dashboard' | 'defects' | 'projects' | 'users') => {
+  const handleNavigate = (page: 'dashboard' | 'defects' | 'projects' | 'users'| 'reports') => {
     const targetPath = navigationItems.find(item => item.id === page)?.path || '/dashboard';
     navigate(targetPath);
     setIsMobileMenuOpen(false);

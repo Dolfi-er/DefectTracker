@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { apiService } from '../services/api';
 import type { OverviewStatsDTO, ProjectStatsDTO, UserStatsDTO, DefectStatusDTO, TimelineStatsDTO, StatusStatsDTO } from '../types/api';
-import { BarChart3, AlertTriangle, CheckCircle, Clock, TrendingUp, PieChart as PieChartIcon, BarChart as BarChartIcon, Activity } from 'lucide-react';
+import { FileText, ArrowRight,BarChart3, AlertTriangle, CheckCircle, Clock, TrendingUp, PieChart as PieChartIcon, BarChart as BarChartIcon, Activity } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 
 export function DashboardPage() {
+  const navigate = useNavigate();
   const [overview, setOverview] = useState<OverviewStatsDTO | null>(null);
   const [projects, setProjects] = useState<ProjectStatsDTO[]>([]);
   const [users, setUsers] = useState<UserStatsDTO[]>([]);
@@ -131,6 +133,14 @@ export function DashboardPage() {
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600 mt-1">Overview of all defects and projects</p>
         </div>
+        <button
+          onClick={() => navigate('/reports')}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <FileText className="w-4 h-4" />
+          Generate Reports
+          <ArrowRight className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Статистические карточки */}

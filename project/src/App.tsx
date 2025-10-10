@@ -10,6 +10,7 @@ import { DefectDetailsPage } from './pages/DefectDetailsPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { UsersPage } from './pages/UsersPage';
 import { apiService } from './services/api';
+import { ReportsPage } from './pages/ReportPage';
 
 apiService.setBaseURL('http://localhost:5229');
 
@@ -30,6 +31,7 @@ function AppContent() {
           <Route path="/defects/:defectId" element={<DefectDetailsPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/users" element={<UsersPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
         </Routes>
       </Layout>
     </ProtectedRoute>
