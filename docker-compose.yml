@@ -10,6 +10,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups  
     networks:
       - app-network
     healthcheck:
@@ -52,6 +53,24 @@ services:
       - "5173:80"
     depends_on:
       - backend
+    networks:
+      - app-network
+
+  backup:
+    build: 
+      context: ./backup
+      dockerfile: Dockerfile
+    container_name: defect_tracker_backup
+    environment:
+      DB_HOST: postgres  
+      DB_USER: admin     
+      DB_NAME: defect_tracker
+      DB_PASSWORD: 1234  
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      - postgres  
+    restart: unless-stopped
     networks:
       - app-network
 
