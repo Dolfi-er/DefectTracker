@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "docker:build": "docker build -t defect-tracker-frontend .",
+    "docker:run": "docker run -p 5173:80 defect-tracker-frontend"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

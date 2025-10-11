@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: defect_tracker_db
+    environment:
+      POSTGRES_DB: defect_tracker
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 1234
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d defect_tracker"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend:
+    build:
+      context: ./Back
+      dockerfile: Dockerfile
+    container_name: defect_tracker_backend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=defect_tracker;Username=admin;Password=1234
+      - Jwt__Key=your-super-secret-key-that-is-at-least-32-characters-long
+      - Jwt__Issuer=defect-tracker
+      - Jwt__Audience=defect-tracker-users
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./project
+      dockerfile: Dockerfile
+    container_name: defect_tracker_frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge

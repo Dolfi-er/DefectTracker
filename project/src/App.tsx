@@ -12,7 +12,7 @@ import { UsersPage } from './pages/UsersPage';
 import { apiService } from './services/api';
 import { ReportsPage } from './pages/ReportPage';
 
-apiService.setBaseURL('http://localhost:5229');
+apiService.setBaseURL('http://localhost:8080');
 
 function AppContent() {
   const { user } = useAuth();
