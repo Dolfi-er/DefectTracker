@@ -1,0 +1,133 @@
+{
+	"id": "81a31f8b-92aa-40ac-b562-18ebbf9e893e",
+	"name": "DefectTracker API Tests",
+	"timestamp": "2025-10-15T12:07:45.788Z",
+	"collection_id": "49292952-9587453b-09dd-489c-be93-4e6fc42d968d",
+	"folder_id": "49292952-e9e2088b-6665-4476-98bc-359e06c65a53",
+	"environment_id": "0",
+	"totalPass": 6,
+	"delay": 0,
+	"persist": true,
+	"status": "finished",
+	"startedAt": "2025-10-15T12:07:44.778Z",
+	"totalFail": 0,
+	"results": [
+		{
+			"id": "1786deb6-9f61-4caa-a5db-119450e74c4f",
+			"name": "Get Defect Statuses",
+			"url": "http://localhost:8080/api/DefectStatuses",
+			"time": 12,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Response has correct content-type": true,
+				"Response time is acceptable": true
+			},
+			"testPassFailCounts": {
+				"Response has correct content-type": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Response time is acceptable": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				12
+			],
+			"allTests": [
+				{
+					"Response has correct content-type": true,
+					"Response time is acceptable": true
+				}
+			]
+		},
+		{
+			"id": "55e8005a-9ca5-49b1-8dbe-7271bf577485",
+			"name": "Get Project Statuses",
+			"url": "http://localhost:8080/api/ProjectStatuses",
+			"time": 10,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Response has correct content-type": true,
+				"Response time is acceptable": true
+			},
+			"testPassFailCounts": {
+				"Response has correct content-type": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Response time is acceptable": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				10
+			],
+			"allTests": [
+				{
+					"Response has correct content-type": true,
+					"Response time is acceptable": true
+				}
+			]
+		},
+		{
+			"id": "07a4d857-411f-4066-a88c-c7e879a5ad1e",
+			"name": "Get Roles",
+			"url": "http://localhost:8080/api/Roles",
+			"time": 11,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {
+				"Response has correct content-type": true,
+				"Response time is acceptable": true
+			},
+			"testPassFailCounts": {
+				"Response has correct content-type": {
+					"pass": 1,
+					"fail": 0
+				},
+				"Response time is acceptable": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				11
+			],
+			"allTests": [
+				{
+					"Response has correct content-type": true,
+					"Response time is acceptable": true
+				}
+			]
+		}
+	],
+	"count": 1,
+	"totalTime": 33,
+	"collection": {
+		"requests": [
+			{
+				"id": "1786deb6-9f61-4caa-a5db-119450e74c4f",
+				"method": "GET"
+			},
+			{
+				"id": "55e8005a-9ca5-49b1-8dbe-7271bf577485",
+				"method": "GET"
+			},
+			{
+				"id": "07a4d857-411f-4066-a88c-c7e879a5ad1e",
+				"method": "GET"
+			}
+		]
+	}
+}
