@@ -1,0 +1,884 @@
+{
+	"info": {
+		"_postman_id": "9587453b-09dd-489c-be93-4e6fc42d968d",
+		"name": "DefectTracker API Tests",
+		"description": "Полный набор тестов для API системы отслеживания дефектов",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "49292952",
+		"_collection_link": "https://ssdolgova2005-5760777.postman.co/workspace/%D0%A1%D0%BE%D1%84%D1%8C%D1%8F-%D0%94%D0%BE%D0%BB%D0%B3%D0%BE%D0%B2%D0%B0-(Silika)'s-Worksp~45de7f17-4ddc-41e5-8063-d917c8994206/collection/49292952-9587453b-09dd-489c-be93-4e6fc42d968d?action=share&source=collection_link&creator=49292952"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Tests для аутентификации",
+									"pm.test(\"Auth Login - Status 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Auth Login - Returns token and user data\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.token).to.be.a('string');",
+									"    pm.expect(response.user).to.be.an('object');",
+									"    pm.expect(response.user.login).to.eql('admin');",
+									"    pm.expect(response.expires).to.be.a('string');",
+									"    ",
+									"    // Сохраняем токен для последующих запросов",
+									"    pm.collectionVariables.set(\"authToken\", response.token);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"login\": \"admin\",\n    \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/Auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Auth Me - Returns user data\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.userId).to.be.a('number');",
+									"    pm.expect(response.login).to.eql('admin');",
+									"    pm.expect(response.fio).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Auth",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Auth/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Projects",
+			"item": [
+				{
+					"name": "Get All Projects",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Projects - Get all returns array\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Projects",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Projects"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Project",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Projects - Create project success\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.projectId).to.be.a('number');",
+									"    pm.expect(response.name).to.be.a('string');",
+									"    ",
+									"    // Сохраняем ID созданного проекта",
+									"    pm.collectionVariables.set(\"testProjectId\", response.projectId.toString());",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"projectStatusId\": 1,\n    \"name\": \"Test Project from Postman\",\n    \"description\": \"Test Project Description\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/Projects",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Projects"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Project by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Projects - Get by ID returns correct project\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.projectId).to.eql(parseInt(pm.collectionVariables.get(\"testProjectId\")));",
+									"    pm.expect(response.name).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Projects/{{testProjectId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Projects",
+								"{{testProjectId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Defects",
+			"item": [
+				{
+					"name": "Get All Defects",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Defects - Get all returns array\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Defects",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Defects"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Defect",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Defects - Create defect success\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.defectId).to.be.a('number');",
+									"    pm.expect(response.projectId).to.be.a('number');",
+									"    pm.expect(response.info).to.be.an('object');",
+									"    ",
+									"    pm.collectionVariables.set(\"testDefectId\", response.defectId.toString());",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"projectId\": {{testProjectId}},\n    \"statusId\": 1,\n    \"responsibleId\": 1,\n    \"createdById\": 1,\n    \"info\": {\n        \"defectName\": \"Test Defect from Postman\",\n        \"defectDescription\": \"Test Defect Description\",\n        \"priority\": 2,\n        \"dueDate\": \"2024-12-31T00:00:00\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/Defects",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Defects"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Defect by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Defects - Get by ID returns correct defect\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.defectId).to.eql(parseInt(pm.collectionVariables.get(\"testDefectId\")));",
+									"    pm.expect(response.projectId).to.eql(parseInt(pm.collectionVariables.get(\"testProjectId\")));",
+									"});",
+									"",
+									"pm.test(\"DefectDTO has required fields\", function () {",
+									"    const defect = pm.response.json();",
+									"    pm.expect(defect).to.have.property('defectId');",
+									"    pm.expect(defect).to.have.property('projectId');",
+									"    pm.expect(defect).to.have.property('statusId');",
+									"    pm.expect(defect).to.have.property('info');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Defects/{{testDefectId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Defects",
+								"{{testDefectId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Comments",
+			"item": [
+				{
+					"name": "Get All Comments",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Comments - Get all returns array\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Comments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Comments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Comment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Comments - Create comment success\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.commentId).to.be.a('number');",
+									"    pm.expect(response.defectId).to.be.a('number');",
+									"    pm.expect(response.commentText).to.be.a('string');",
+									"    ",
+									"    pm.collectionVariables.set(\"testCommentId\", response.commentId.toString());",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"defectId\": {{testDefectId}},\n    \"userId\": 1,\n    \"commentText\": \"Test comment from Postman\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/Comments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Comments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Comments by Defect",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Comments - Get by defect returns array\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('array');",
+									"    if (response.length > 0) {",
+									"        pm.expect(response[0].defectId).to.eql(parseInt(pm.collectionVariables.get(\"testDefectId\")));",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Comments/defect/{{testDefectId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Comments",
+								"defect",
+								"{{testDefectId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Statistics",
+			"item": [
+				{
+					"name": "Get Overview Statistics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Statistics - Overview returns valid data\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.totalDefects).to.be.a('number');",
+									"    pm.expect(response.defectsByStatus).to.be.an('object');",
+									"    pm.expect(response.defectsByPriority).to.be.an('object');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Statistics/overview",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Statistics",
+								"overview"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Defects by Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Statistics - Defects by status returns array\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('array');",
+									"    ",
+									"    if (response.length > 0) {",
+									"        pm.expect(response[0].statusId).to.be.a('number');",
+									"        pm.expect(response[0].count).to.be.a('number');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Statistics/defects-by-status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Statistics",
+								"defects-by-status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Defects Timeline",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Statistics - Timeline returns array\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Statistics/defects-timeline?days=30",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Statistics",
+								"defects-timeline"
+							],
+							"query": [
+								{
+									"key": "days",
+									"value": "30"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get All Users",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Users - Get all returns array\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('array');",
+									"    ",
+									"    // Проверяем структуру пользователя",
+									"    if (response.length > 0) {",
+									"        pm.expect(response[0].userId).to.be.a('number');",
+									"        pm.expect(response[0].login).to.be.a('string');",
+									"    }",
+									"});",
+									"",
+									"pm.test(\"UserDTO has required fields\", function () {",
+									"    const users = pm.response.json();",
+									"    if (users.length > 0) {",
+									"        const user = users[0];",
+									"        pm.expect(user).to.have.property('userId');",
+									"        pm.expect(user).to.have.property('login');",
+									"        pm.expect(user).to.have.property('fio');",
+									"        pm.expect(user).to.have.property('roleId');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Users"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Additional Endpoints",
+			"item": [
+				{
+					"name": "Get Defect Statuses",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/DefectStatuses",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"DefectStatuses"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Project Statuses",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/ProjectStatuses",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ProjectStatuses"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Roles",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/Roles",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"Roles"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{authToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"console.log('Running test for: ' + pm.request.name);"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Общие тесты для всех запросов",
+					"pm.test(\"Response has correct content-type\", function () {",
+					"    pm.response.to.have.header(\"Content-Type\");",
+					"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+					"});",
+					"",
+					"pm.test(\"Response time is acceptable\", function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(3000);",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "authToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "testProjectId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "testDefectId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "testCommentId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "testUserId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
